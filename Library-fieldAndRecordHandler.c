@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #define TRUE 1
 #define FALSE 0
 typedef struct Book {
@@ -24,12 +25,13 @@ bookRecord readRegister(){
 
     fgets(buffer, sizeof(buffer), stdin);
     delimiterTitle(buffer);
+    myBook.title = (char*) malloc(strlen(buffer) + 1);
     strcpy(myBook.title, buffer);
 
     fgets(buffer, sizeof(buffer), stdin);
     strtok(buffer, "\n");
     int sizeAuthor = strlen(buffer);
-
+    myBook.author = (char*) malloc(sizeAuthor + 2);
     sprintf(myBook.author, "%d%s%d", sizeAuthor, buffer, delimiter);
 
     return myBook;
@@ -42,11 +44,18 @@ int checkOpenFile (FILE *file){
         return 1;
 }
 
-void displayBookRecords(bookRecord *books, int total) {
+void displayBookRecords(FILE *arq, int total) {
+    bookRecord book;
+    int byteOffset = 0; 
     for (int i = 0; i < total; i++) {
-        printf("%d", books[i].id);
-        printf("%s", books[i].title); 
-        printf("%s\n", books[i].author);
+        fseek(arq, byteOffset, SEEK_SET);
+        fread(&book, sizeof(bookRecord), 1, arq);
+
+        printf("Id: %d\n", book.id);
+        printf("Titulo: %s\n", book.title); 
+        printf("Autor: %s\n", book.author);
+        printf("Byte offset: %d\n", byteOffset); 
+        byteOffset += sizeof(bookRecord); 
     }
 }
 
@@ -60,7 +69,6 @@ int openFile(FILE **arq, char *type){
     }
 }
 
-
 int main(){
     int totalBook = 0;
     bookRecord *books;
@@ -70,27 +78,28 @@ int main(){
         printf("Enter total number of books: ");
         scanf ("%d", &totalBook);
 
-        books = malloc (sizeof(bookRecord)*totalBook);
+        books = (bookRecord*) malloc (sizeof(bookRecord)*totalBook);
 
         for (int i = 0; i < totalBook; i++){
             books[i] = readRegister();
             fwrite(&books[i], sizeof(bookRecord), 1, arq);
         }
+
         fclose(arq);
 
+        // Abrir o arquivo novamente em modo de leitura binária
         if (openFile(&arq, "rb")){
-            if (checkOpenFile(arq)){
-                displayBookRecords(books, totalBook);
-        fclose(arq);
-            } else {
-                printf("Error opening file.\n");
-            }
+            displayBookRecords(arq, totalBook);
+            fclose(arq);
         }
 
-        // Libere a memória alocada
-        free(books);
-    } else {
-        printf("Error opening file.\n");
+        // Liberar a memória alocada dinamicamente
+        for (int i = 0; i < totalBook; i++){
+            free(books[i].title);
+            free(books[i].author);
+       
+}
+    free(books);
     }
 
     return 0;
