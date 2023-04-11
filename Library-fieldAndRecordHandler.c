@@ -11,8 +11,9 @@ typedef struct Book {
 } bookRecord;
 
 void delimiterTitle(char* title){
-    strtok(title, "\n");
-    strcat(title, "|");
+    char* token = strtok(title, "\n");
+    if (token != NULL) 
+        strcat(title, "|");
 }
 
 bookRecord readRegister(){
@@ -52,8 +53,8 @@ void displayBookRecords(FILE *arq, int total) {
         fread(&book, sizeof(bookRecord), 1, arq);
 
         printf("Id: %d\n", book.id);
-        printf("Titulo: %s\n", book.title); 
-        printf("Autor: %s\n", book.author);
+        printf("Title: %s\n", book.title);
+       	printf("Author: %s\n", book.author);
         printf("Byte offset: %d\n", byteOffset); 
         byteOffset += sizeof(bookRecord); 
     }
@@ -87,13 +88,11 @@ int main(){
 
         fclose(arq);
 
-        // Abrir o arquivo novamente em modo de leitura binária
         if (openFile(&arq, "rb")){
             displayBookRecords(arq, totalBook);
             fclose(arq);
         }
 
-        // Liberar a memória alocada dinamicamente
         for (int i = 0; i < totalBook; i++){
             free(books[i].title);
             free(books[i].author);
