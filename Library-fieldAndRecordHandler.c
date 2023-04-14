@@ -17,6 +17,7 @@ void writeID(int id, FILE *file);
 int readId();
 void writeTitle(char *title, FILE *file); 
 void writeAuthor(char *author, FILE *file); 
+void readBuffer(char *buffer, int bufferSize); 
 void readString(char **element);
 bookRecord writeRegister(FILE *file); 
 int openFile(FILE **arq, char *type);
@@ -33,67 +34,72 @@ int main() {
     int totalBook = 0;
     bookRecord *books;
     FILE* arq;
-    if (openFile(&arq, "wb")) {
+    if (openFile(&arq, "wb+")) {
         readTotalBooks(&totalBook);
         books = (bookRecord*) malloc(sizeof(bookRecord)*totalBook);
         readBooks(arq, totalBook, books);
         freeMemory(books, totalBook);
         fclose(arq);
     }
-    if (openFile(&arq, "rb, ccs=UTF-8")) {
-       books = (bookRecord*) malloc(sizeof(bookRecord)*totalBook);
+    if (openFile(&arq, "rb+")) {
+        books = (bookRecord*) malloc(sizeof(bookRecord)*totalBook);
+
        readElementsFile(arq, totalBook, books);
+     freeMemory(books, totalBook);
+
        fclose(arq);
     }
-    freeMemory(books, totalBook);
     return 0;
 }
 
 void writeID(int id, FILE *file) {
-    fwrite(&id, sizeof(int), 1, file); // write the ID to the file
+    fwrite(&id, sizeof(int), 1, file); 
 }
 
-int readId() {
+int  readId() {
     int id;
     scanf("%d", &id);
-    getchar();
     return id;
 }
 
 void writeTitle(char *title, FILE *file) {
-    char delimiter = '|';
     int sizeStringTitle = strlen(title);
-    fwrite(title, sizeof(sizeStringTitle), 1, file); // write the title to the file
-    fwrite(&delimiter, sizeof(char), 1, file);
+    char a = '|';
+    fwrite(title, sizeof(char), sizeStringTitle, file); 
+    fwrite(&a, sizeof(char), 1, file);
 }
 
 void writeAuthor(char *author, FILE *file) {
-    char delimiter = -1;
+	char delimiter = -1; 
     int sizeStringAuthor = strlen(author);
-    fwrite(&sizeStringAuthor, sizeof(int), 1, file); // write the string size
-    fwrite(author, sizeof(sizeStringAuthor), 1, file); // write the author to the file
-    fwrite(&delimiter, sizeof(char), 1, file); // add delimiter -1 to the author's name
+    fwrite(&sizeStringAuthor, sizeof(int), 1, file); 
+    fwrite(author, sizeof(char), sizeStringAuthor, file); 
+    fwrite(&delimiter, sizeof(char), 1, file); 
 }
 
-
+void readBuffer(char *buffer, int bufferSize) {
+    scanf(" %[^(\r|\n)]", buffer);
+    buffer[strcspn(buffer, "\n")] = '\0'; 
+}
 
 void readString(char **element) {
     char buffer[SIZE_BUFFER];
-    scanf(" %[^(\r|\n)]", buffer); 
+    readBuffer(buffer, SIZE_BUFFER);
     *element = (char*) malloc(sizeof(char) * (strlen(buffer) + 1));
     strcpy(*element, buffer);
 }
 
 bookRecord writeRegister(FILE *file) {
     bookRecord myBook;
-    myBook.id = readId(); // Read ID
-    writeID(myBook.id, file);   // Write ID to file
-    
-    readString(&myBook.title); // Read title
-    writeTitle(myBook.title, file); // Write title to file
-    
-    readString(&myBook.author); // Read author
-    writeAuthor(myBook.author, file); // Write author to file
+    myBook.id = readId(); 
+    writeID(myBook.id, file);   
+
+    readString(&myBook.title); 
+    writeTitle(myBook.title, file); 
+
+    readString(&myBook.author); 
+    writeAuthor(myBook.author, file); 
+
     return myBook;
 }
 
@@ -115,9 +121,7 @@ int checkOpenFile(FILE *file){
 }
 
 void readTotalBooks(int *totalBook) {
-    //printf("Enter total number of books: ");
-    scanf("%d", totalBook);
-    getchar(); 
+     scanf("%d", totalBook);
 }
 
 void readBooks(FILE *arq, int totalBook, bookRecord *books) {
@@ -125,39 +129,28 @@ void readBooks(FILE *arq, int totalBook, bookRecord *books) {
         books[i] = writeRegister(arq);
 }
 
-void readTitle(FILE *arq, char **title) {
-    char buffer[SIZE_BUFFER];
+void readTitle(FILE *arq, char **title){ 
+	char buffer[SIZE_BUFFER]; 
     int currentChar;
     int currentInputIndex = 0;
-    
-    while ((currentChar = fgetc(arq)) != EOF && (currentChar != '|')) 
-        buffer[currentInputIndex++] = currentChar;
+
+    while ((currentChar = fgetc(arq)) != EOF && currentChar != '|') 
+    {
+    	buffer[currentInputIndex++] = currentChar;
+    }	
     buffer[currentInputIndex] = '\0';
-    *title = (char*) malloc((currentInputIndex + 1) * sizeof(char));
+    *title = (char*) malloc((strlen(buffer) + 1) * sizeof(char));
     strcpy(*title, buffer);
+
 }
 
-void readAuthor(FILE *arq, char **author) {
-    char buffer[SIZE_BUFFER];
-    int currentInputIndex = 0;
-    int currentChar;
-
-    currentChar = fgetc(arq);
-    if (currentChar == EOF) {
-        return;
-    }
-
-    while (currentChar != EOF && currentChar != '|') {
-        buffer[currentInputIndex++] = currentChar;
-        currentChar = fgetc(arq);
-        if (currentChar == EOF || currentInputIndex >= SIZE_BUFFER - 1) {
-            break;
-        }
-    }
-
-    buffer[currentInputIndex] = '\0';
-    *author = (char*) malloc((strlen(buffer) + 1) * sizeof(char));
-    strcpy(*author, buffer);
+void readAuthor (FILE *arq, char **author){
+	char buffer[SIZE_BUFFER]; 
+    int sizeAuthor = 0;
+    fread(&sizeAuthor, sizeof(int), 1, arq);
+	fread(buffer, sizeof(char), sizeAuthor, arq);
+	*author = (char*) malloc((strlen(buffer) + 1) * sizeof(char)); 
+	strcpy(*author, buffer);
 }
 
 void displayBookRecords(FILE *arq, int total, bookRecord *book){
@@ -168,11 +161,13 @@ void displayBookRecords(FILE *arq, int total, bookRecord *book){
         printf ("ByteOfSet: %d\n", book->byteOfSet);
 }
 
-void readElementsFile(FILE *arq, int total, bookRecord *book) {  
+void readElementsFile(FILE *arq, int total, bookRecord *book) { 
 	for (int i = 0; i < total; i++){
+
 		fread(&book[i].id, sizeof(int), 1, arq);
 		readTitle(arq, &book[i].title);
 		readAuthor(arq, &book[i].author); 
+        fgetc(arq);
 		displayBookRecords(arq, book[i].byteOfSet, &book[i]);
 	}
 }
